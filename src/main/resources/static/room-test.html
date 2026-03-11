@@ -15,28 +15,57 @@
 <button onclick="joinBob()">Join as Bob</button>
 
 <pre id="messages"></pre>
+<canvas id = "drawBoard" width = "800" height = "600"></canvas>
+
+<form onSubmit = "handleSubmit(event)">
+    <label>Guess Word: </label>
+    <input id = "guess" type = "text" placeholder="Enter your Guess"/>
+    <button type = "Submit">Guess</button>
+</form>
 
 <script>
 
     let stompClient = null;
+
 
     function connect() {
 
         let socket = new SockJS("http://localhost:8080/ws");
         stompClient = Stomp.over(socket);
 
+
         stompClient.connect({},function(frame){
 
             console.log("Connected" + frame);
+
+            //Join room
             stompClient.subscribe("/topic/room",function(message){
                 let msg = JSON.parse(message.body);
-                document.getElementById("messages").innerHtml+=JSON.stringify(msg)+"\n";
+                document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
+            });
+
+            //Draw
+            stompClient.subscribe("/topic/room/room123",function(message){
+                let msg = JSON.parse(message.body);
+
+
+                //Draw
+                if(msg.type == "DRAW_EVENT"){
+                    drawPoint(msg);
+                }
+
+                //Guess
+                if(msg.type == "GUESS"){
+                    document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
+                }
             });
         });
     }
 
-    function joinAlice() {
+    let username = "";
 
+    function joinAlice() {
+        username = "Alice";
         stompClient.send("/app/room", {}, JSON.stringify({
             type: "JOIN_ROOM",
             roomId: "room123",
@@ -46,13 +75,66 @@
     }
 
     function joinBob() {
-
+        username = "Bob";
         stompClient.send("/app/room", {}, JSON.stringify({
             type: "JOIN_ROOM",
             roomId: "room123",
             sender: "Bob"
         }));
 
+    }
+
+    //Draw Board request send
+    let canvas = document.getElementById("drawBoard");
+    let ctx = canvas.getContext("2d");
+
+    let drawing = false;
+
+    canvas.addEventListener("mousedown",() => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousemove", function(event){
+
+        if(!drawing) return;
+
+        let rect = canvas.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+
+        if(username == "") return ;
+        stompClient.send("/app/draw",{},JSON.stringify({
+            type: "DRAW_EVENT",
+            roomId: "room123",
+            sender: username,
+            x: x,
+            y: y,
+            color: "black",
+            thickness: 4
+        }));
+
+    });
+
+    //Draw response
+    function drawPoint(msg){
+
+        ctx.fillStyle = msg.color;
+        ctx.beginPath();
+        ctx.arc(msg.x,msg.y,msg.thickness,0,2 * Math.PI);
+        ctx.fill();
+    }
+
+    //Guess Request
+    function handleSubmit(event){
+        event.preventDefault();
+        let guess = document.getElementById("guess").value;
+        if(!stompClient) return ;
+        stompClient.send("/app/guess",{},JSON.stringify({
+            type:"GUESS",
+            roomId:"room123",
+            sender:username,
+            content:guess
+        }));
+
+        document.getElementById("guess").value = "";
     }
 
 </script>

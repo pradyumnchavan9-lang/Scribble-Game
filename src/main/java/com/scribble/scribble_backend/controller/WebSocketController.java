@@ -9,6 +9,7 @@ import com.scribble.scribble_backend.service.RoomManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -16,6 +17,8 @@ public class WebSocketController {
 
     @Autowired
     private RoomManager roomManager;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/chat")
     @SendTo("/topic/messages")
@@ -24,6 +27,7 @@ public class WebSocketController {
     }
 
 
+    //Join Room
     @MessageMapping("/room")
     @SendTo("/topic/room")
     public Message joinRoom(Message message){
@@ -44,4 +48,33 @@ public class WebSocketController {
         return broadcast;
     }
 
+    //Draw Event
+    @MessageMapping("/draw")
+    public void handleDraw(Message message){
+
+        String roomTopic = "/topic/room/" + message.getRoomId();
+        messagingTemplate.convertAndSend(roomTopic,message);
+    }
+
+    //Validate Guess
+    @MessageMapping("/guess")
+    public void validateGuess(Message message){
+        String guess = message.getContent();
+        String correctAns = roomManager.getCorrectWord(message.getRoomId());
+
+        Message broadcast = new Message();
+        broadcast.setRoomId(message.getRoomId());
+        broadcast.setSender(message.getSender());
+        if(guess.equalsIgnoreCase(correctAns)){
+            broadcast.setType(MessageType.CORRECT_GUESS);
+            String content = message.getSender() + " guessed correctly!";
+            broadcast.setContent(content);
+        }else{
+            broadcast.setType(MessageType.CHAT);
+            broadcast.setContent(guess);
+        }
+
+        String roomTopic = "/topic/room/" + message.getRoomId();
+        messagingTemplate.convertAndSend(roomTopic,broadcast);
+    }
 }

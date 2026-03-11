@@ -8,6 +8,7 @@ public enum MessageType {
     PLAYER_LEFT,
     CHAT,
     DRAW_EVENT,
-    GUESS
+    GUESS,
+    CORRECT_GUESS
 
 }

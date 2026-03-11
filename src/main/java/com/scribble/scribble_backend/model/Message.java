@@ -16,6 +16,10 @@ public class Message {
     private String content;
     private String roomId;
 
-
+    //for draw event we need
+    private Integer x;
+    private Integer y;
+    private String color;
+    private Double thickness;
 
 }
