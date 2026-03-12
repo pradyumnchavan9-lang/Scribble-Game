@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,5 +23,9 @@ public class Message {
     private Integer y;
     private String color;
     private Double thickness;
+
+    private String drawer;
+    private Map<String,Integer> playerScores;
+    private String winner;
 
 }

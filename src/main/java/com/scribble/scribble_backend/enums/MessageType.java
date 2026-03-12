@@ -9,6 +9,8 @@ public enum MessageType {
     CHAT,
     DRAW_EVENT,
     GUESS,
-    CORRECT_GUESS
+    CORRECT_GUESS,
+    ROUND_START,
+    ROUND_END,
 
 }

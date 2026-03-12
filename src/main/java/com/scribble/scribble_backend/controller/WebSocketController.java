@@ -5,12 +5,15 @@ import com.scribble.scribble_backend.enums.MessageType;
 import com.scribble.scribble_backend.model.Message;
 import com.scribble.scribble_backend.model.Player;
 import com.scribble.scribble_backend.model.Room;
+import com.scribble.scribble_backend.service.GameEngine;
 import com.scribble.scribble_backend.service.RoomManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+
+import java.util.List;
 
 @Controller
 public class WebSocketController {
@@ -19,6 +22,8 @@ public class WebSocketController {
     private RoomManager roomManager;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private GameEngine gameEngine;
 
     @MessageMapping("/chat")
     @SendTo("/topic/messages")
@@ -60,13 +65,21 @@ public class WebSocketController {
     @MessageMapping("/guess")
     public void validateGuess(Message message){
         String guess = message.getContent();
-        String correctAns = roomManager.getCorrectWord(message.getRoomId());
+        Room room = roomManager.getRoom(message.getRoomId());
+        String correctAns = room.getCurrentWord();
 
         Message broadcast = new Message();
         broadcast.setRoomId(message.getRoomId());
         broadcast.setSender(message.getSender());
+        List<Player> players = room.getPlayers();
         if(guess.equalsIgnoreCase(correctAns)){
             broadcast.setType(MessageType.CORRECT_GUESS);
+            for(Player player : players){
+                if(player.getUsername().equals(message.getSender())){
+                    player.setCorrectGuess(true);
+                    player.setScore(player.getScore() + 1);
+                }
+            }
             String content = message.getSender() + " guessed correctly!";
             broadcast.setContent(content);
         }else{
@@ -76,5 +89,11 @@ public class WebSocketController {
 
         String roomTopic = "/topic/room/" + message.getRoomId();
         messagingTemplate.convertAndSend(roomTopic,broadcast);
+    }
+
+    //Start Game
+    @MessageMapping("/start")
+    public void startGame(Message message){
+        gameEngine.startGame(message.getRoomId());
     }
 }
