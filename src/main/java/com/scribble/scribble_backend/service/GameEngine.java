@@ -34,7 +34,7 @@ public class GameEngine {
 
     private final Random random = new Random();
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
     public void startGame(String roomId){
 
@@ -60,7 +60,7 @@ public class GameEngine {
             playerScores.put(p.getUsername(),0);
         }
         room.setPlayerScores(playerScores);
-
+        roomManager.saveRoom(room);
         startRound(roomId);
     }
 
@@ -71,7 +71,7 @@ public class GameEngine {
         //Get the room
         Room room  = roomManager.getRoom(roomId);
         if(room == null){
-            throw new RuntimeException("Room not found");
+            throw new   RuntimeException("Room not found");
         }
 
         List<Player> players = room.getPlayers();
@@ -90,6 +90,8 @@ public class GameEngine {
         //Select a random word to be guessed
         String correctWord = words.get(random.nextInt(words.size()));
         room.setCurrentWord(correctWord);
+        room.setRoundActive(true);
+        roomManager.saveRoom(room);
 
         //2 broadcast messages
         //1st to everyone
@@ -122,10 +124,16 @@ public class GameEngine {
     public void endRound(String roomId){
 
         Room room =  roomManager.getRoom(roomId);
+
         if(room == null){
             throw new RuntimeException("Room not found");
         }
+        if(!room.isRoundActive()){
+            return;
+        }
 
+        room.setRoundActive(false);
+        roomManager.saveRoom(room);
         boolean foundAns = false;
         for(Player p : room.getPlayers()){
             if(p.isCorrectGuess()){
@@ -140,14 +148,21 @@ public class GameEngine {
         if(!foundAns){
             publicMsg.setContent(room.getCurrentWord());
         }
-        Map<String,Integer> playerScores = room.getPlayerScores();
-        for(Player p : room.getPlayers()){
-            playerScores.put(p.getUsername(),p.getScore());
-        }
-        room.setPlayerScores(playerScores);
+
+        //Get player scores
+       Map<String,Integer> playerScores = room.getPlayerScores();
+
+        //Update Drawer index
         room.setDrawerIndex(room.getDrawerIndex() + 1);
+        //Save room
+        roomManager.saveRoom(room);
+
+        //Set player scores to message
         publicMsg.setPlayerScores(playerScores);
+
+        //topic room for broadcasting
         String topicRoom = "/topic/room/" + roomId;
+
         //game end condition
         if(room.getRoundNumber() == room.getPlayers().size()){
             publicMsg.setContent("Game Ended with Scores");
@@ -164,9 +179,11 @@ public class GameEngine {
         messagingTemplate.convertAndSend(topicRoom, publicMsg);
 
         if(room.getRoundNumber() == room.getPlayers().size()){
-            room.setGameStarted(false);
             room.setRoundNumber(0);
             room.setDrawerIndex(0);
+            room.setRoundActive(false);
+            room.setGameStarted(false);
+            roomManager.saveRoom(room);
             return;
         }
         startRound(roomId);

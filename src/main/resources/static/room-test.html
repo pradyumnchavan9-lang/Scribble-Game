@@ -29,6 +29,7 @@
 
     let stompClient = null;
     let username = "";
+    let roomId = "";
 
     function connect() {
 
@@ -42,7 +43,7 @@
                 console.log("Connected " + frame);
 
                 // Room join notifications
-                stompClient.subscribe("/topic/room",function(message){
+                stompClient.subscribe("/topic/room/" + roomId,function(message){
                     let msg = JSON.parse(message.body);
                     document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
                 });
@@ -92,11 +93,13 @@
 
     function joinAlice(){
         username = "Alice";
+        roomId = "room123";
         connect();
     }
 
     function joinBob(){
         username = "Bob";
+        roomId = "room123";
         connect();
     }
 

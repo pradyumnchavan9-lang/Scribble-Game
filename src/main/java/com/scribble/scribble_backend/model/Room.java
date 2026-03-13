@@ -1,6 +1,7 @@
 package com.scribble.scribble_backend.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Map;
 
 
 @Data
+@NoArgsConstructor
 public class Room {
 
     private String roomId;
@@ -18,6 +20,7 @@ public class Room {
     private String currentWord;
     private int roundNumber;
     private Map<String,Integer> playerScores;
+    private boolean roundActive;
 
     public Room(String roomId){
         this.roomId = roomId;

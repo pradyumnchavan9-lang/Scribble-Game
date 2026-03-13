@@ -2,35 +2,32 @@ package com.scribble.scribble_backend.service;
 
 
 import com.scribble.scribble_backend.model.Room;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class RoomManager {
 
-    private Map<String, Room> rooms = new ConcurrentHashMap<>();
-    private Map<String, String> roomWords = new ConcurrentHashMap<>();
+    @Autowired
+    private RedisService redisService;
 
     public Room createRoom(String roomId) {
         Room room = new Room(roomId);
-        roomWords.putIfAbsent(roomId,"apple");
-        rooms.put(roomId, room);
+
+        String key = "room:" + roomId;
+        redisService.set(key,room,300L);
         return room;
     }
 
     public Room getRoom(String roomId){
-        return rooms.get(roomId);
+        String key =  "room:" + roomId;
+        return redisService.get(key,Room.class);
     }
 
-    public String getCorrectWord(String roomId){
-        return roomWords.get(roomId);
-    }
-
-
-    public void removeRoom(String roomId){
-        rooms.remove(roomId);
+    public void saveRoom(Room room){
+        String key = "room:" + room.getRoomId();
+        redisService.set(key,room,300L);
     }
 
 }

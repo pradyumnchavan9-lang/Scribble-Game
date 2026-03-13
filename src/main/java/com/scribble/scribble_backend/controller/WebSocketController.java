@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class WebSocketController {
@@ -34,8 +35,9 @@ public class WebSocketController {
 
     //Join Room
     @MessageMapping("/room")
-    @SendTo("/topic/room")
-    public Message joinRoom(Message message){
+    public void joinRoom(Message message){
+
+
         Room room  = roomManager.getRoom(message.getRoomId());
         if(room == null){
             room = roomManager.createRoom(message.getRoomId());
@@ -44,13 +46,15 @@ public class WebSocketController {
         Player player = new Player(message.getSender(), message.getSender());
         room.addPlayer(player);
 
+
         Message broadcast = new Message();
         broadcast.setType(MessageType.PLAYER_JOINED);
         broadcast.setRoomId(room.getRoomId());
         broadcast.setSender(player.getUsername());
         broadcast.setContent(player.getUsername() + " joined the room");
-
-        return broadcast;
+        roomManager.saveRoom(room);
+        String topic = "/topic/room/" + room.getRoomId();
+        messagingTemplate.convertAndSend(topic, broadcast);
     }
 
     //Draw Event
@@ -66,19 +70,38 @@ public class WebSocketController {
     public void validateGuess(Message message){
         String guess = message.getContent();
         Room room = roomManager.getRoom(message.getRoomId());
+        if(room == null){
+            throw new RuntimeException("room not found");
+        }
         String correctAns = room.getCurrentWord();
 
         Message broadcast = new Message();
         broadcast.setRoomId(message.getRoomId());
         broadcast.setSender(message.getSender());
         List<Player> players = room.getPlayers();
+        Map<String,Integer> playerScores = room.getPlayerScores();
         if(guess.equalsIgnoreCase(correctAns)){
             broadcast.setType(MessageType.CORRECT_GUESS);
             for(Player player : players){
-                if(player.getUsername().equals(message.getSender())){
+
+                //Increment correct guesser's score
+                if(player.getUsername().equals(message.getSender()) && !player.isCorrectGuess()){
+
+                    //Increment Drawers Score
+                    Player drawer = room.getCurrentDrawer();
+                    drawer.setScore(drawer.getScore() + 5);
                     player.setCorrectGuess(true);
-                    player.setScore(player.getScore() + 1);
+                    player.setScore(player.getScore() + 10);
+
+                    //Update player scores
+                    playerScores.put(player.getUsername(),player.getScore());
+                    playerScores.put(drawer.getUsername(),drawer.getScore());
+                    room.setPlayerScores(playerScores);
+                    broadcast.setPlayerScores(playerScores);
+                    roomManager.saveRoom(room);
+                    gameEngine.endRound(room.getRoomId());
                 }
+
             }
             String content = message.getSender() + " guessed correctly!";
             broadcast.setContent(content);
@@ -86,7 +109,7 @@ public class WebSocketController {
             broadcast.setType(MessageType.CHAT);
             broadcast.setContent(guess);
         }
-
+        roomManager.saveRoom(room);
         String roomTopic = "/topic/room/" + message.getRoomId();
         messagingTemplate.convertAndSend(roomTopic,broadcast);
     }
@@ -94,6 +117,7 @@ public class WebSocketController {
     //Start Game
     @MessageMapping("/start")
     public void startGame(Message message){
+
         gameEngine.startGame(message.getRoomId());
     }
 }
