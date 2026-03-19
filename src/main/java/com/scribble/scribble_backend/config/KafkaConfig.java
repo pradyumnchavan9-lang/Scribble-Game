@@ -1,6 +1,5 @@
 package com.scribble.scribble_backend.config;
 
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -18,25 +17,25 @@ import java.util.Map;
 @EnableKafka
 public class KafkaConfig {
 
-
-    //Producer Factory
+    // Producer factory
     @Bean
-    public ProducerFactory<String,String> producerFactory(){
-
+    public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         return new DefaultKafkaProducerFactory<>(config);
     }
 
+    // Kafka template
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate(){
+    public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 
-    //Consumer Factory
-    public ConsumerFactory<String, String> consumerFactory(){
+    // Consumer factory
+    @Bean
+    public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
@@ -46,9 +45,9 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
-    //The bean required for kafka listener
+    // Kafka listener container factory
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(){
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;

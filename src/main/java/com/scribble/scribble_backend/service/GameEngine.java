@@ -118,7 +118,7 @@ public class GameEngine {
         );
 
         //End round after 60 seconds
-        int roundDurationSeconds = 10;
+        int roundDurationSeconds = 60;
         ScheduledFuture<?> future = scheduler.schedule(() -> endRound(room),roundDurationSeconds, TimeUnit.SECONDS);
         //Put the remote in the map
         roundTimers.put(roomId,future);
