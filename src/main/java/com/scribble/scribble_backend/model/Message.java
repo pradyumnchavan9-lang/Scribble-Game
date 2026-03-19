@@ -21,6 +21,8 @@ public class Message {
     //for draw event we need
     private Integer x;
     private Integer y;
+    private Integer prevX;
+    private Integer prevY;
     private String color;
     private Double thickness;
 

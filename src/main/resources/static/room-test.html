@@ -29,7 +29,10 @@
 
     let stompClient = null;
     let username = "";
+    let drawer = "";
     let roomId = "";
+    let prevX = null;
+    let prevY = null;
 
     function connect() {
 
@@ -42,12 +45,6 @@
 
                 console.log("Connected " + frame);
 
-                // Room join notifications
-                stompClient.subscribe("/topic/room/" + roomId,function(message){
-                    let msg = JSON.parse(message.body);
-                    document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
-                });
-
                 // Private drawer message
                 stompClient.subscribe("/user/queue/private",function(message){
                     let msg = JSON.parse(message.body);
@@ -55,7 +52,7 @@
                 });
 
                 // Game room events
-                stompClient.subscribe("/topic/room/room123",function(message){
+                stompClient.subscribe("/topic/room/" + roomId,function(message){
                     let msg = JSON.parse(message.body);
 
                     if(msg.type == "DRAW_EVENT"){
@@ -72,10 +69,16 @@
 
                     if(msg.type === "CORRECT_GUESS"){
                         document.getElementById("messages").innerHTML += "🎉 " + msg.content + "\n";
+
                     }
 
                     if(msg.type == "ROUND_START"){
                         document.getElementById("guessWord").innerHTML = "Drawer: " + msg.drawer;
+                        drawer = msg.drawer;
+                    }
+
+                    if(msg.type == "ROUND_END"){
+                        drawer = "";
                     }
 
                 });
@@ -114,37 +117,64 @@
 
     let drawing = false;
 
-    canvas.addEventListener("mousedown",() => drawing = true);
-    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousedown",(event) => {
+        drawing = true;
+        let rect = canvas.getBoundingClientRect();
+        prevX = event.clientX - rect.left;
+        prevY = event.clientY - rect.top;
 
+        });
+    canvas.addEventListener("mouseup", () => {
+        drawing = false;
+        prevX = null;
+        prevY = null;
+
+        });
     canvas.addEventListener("mousemove", function(event){
 
         if(!drawing) return;
+
 
         let rect = canvas.getBoundingClientRect();
         let x = event.clientX - rect.left;
         let y = event.clientY - rect.top;
 
-        if(username == "") return;
+        if(prevX === null || prevY === null){
+            prevX = x;
+            prevY = y;
+            return;
+        }
+
+        if(username != drawer) return;
 
         stompClient.send("/app/draw",{},JSON.stringify({
             type: "DRAW_EVENT",
             roomId: "room123",
             sender: username,
+            drawer : drawer,
             x: x,
             y: y,
+            prevX : prevX,
+            prevY :prevY,
             color: "black",
             thickness: 4
         }));
 
+        prevX = x;
+        prevY = y;
     });
 
     function drawPoint(msg){
 
+
         ctx.fillStyle = msg.color;
+        ctx.lineWidth = msg.thickness;
+        ctx.lineCap = "round";
+
         ctx.beginPath();
-        ctx.arc(msg.x,msg.y,msg.thickness,0,2 * Math.PI);
-        ctx.fill();
+        ctx.moveTo(msg.prevX,msg.prevY);
+        ctx.lineTo(msg.x,msg.y);
+        ctx.stroke();
     }
 
     function handleSubmit(event){
