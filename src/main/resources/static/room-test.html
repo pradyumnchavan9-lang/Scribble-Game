@@ -63,6 +63,10 @@
                         document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
                     }
 
+                    if(msg.type == "PLAYER_JOINED"){
+                        document.getElementById("messages").innerHTML += JSON.stringify(msg)+"\n";
+                    }
+
                     if(msg.type === "CHAT"){
                         document.getElementById("messages").innerHTML += msg.sender + ": " + msg.content + "\n";
                     }
@@ -86,7 +90,7 @@
                 // AFTER connection → join room
                 stompClient.send("/app/room", {}, JSON.stringify({
                     type: "JOIN_ROOM",
-                    roomId: "room123",
+                    roomId: "room12",
                     sender: username
                 }));
 
@@ -96,19 +100,19 @@
 
     function joinAlice(){
         username = "Alice";
-        roomId = "room123";
+        roomId = "room12";
         connect();
     }
 
     function joinBob(){
         username = "Bob";
-        roomId = "room123";
+        roomId = "room12";
         connect();
     }
 
     function startGame(){
         stompClient.send("/app/start", {}, JSON.stringify({
-            roomId:"room123"
+            roomId:"room12"
         }));
     }
 
@@ -149,7 +153,7 @@
 
         stompClient.send("/app/draw",{},JSON.stringify({
             type: "DRAW_EVENT",
-            roomId: "room123",
+            roomId: "room12",
             sender: username,
             drawer : drawer,
             x: x,
@@ -187,7 +191,7 @@
 
         stompClient.send("/app/guess",{},JSON.stringify({
             type:"GUESS",
-            roomId:"room123",
+            roomId:"room12",
             sender:username,
             content:guess
         }));

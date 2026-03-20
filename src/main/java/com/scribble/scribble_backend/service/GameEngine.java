@@ -44,14 +44,16 @@ public class GameEngine {
         if(room == null){
             throw new  RuntimeException("Room not found");
         }
-        if(room.isGameStarted()){
-           throw new RuntimeException("Game already started");
-        }
-        if(room.getPlayers().size() < 2){
-            throw new RuntimeException("Room has less than 2 players");
-        }
+        synchronized(room){
+            if (room.isGameStarted()) {
+                return;
+            }
+            if (room.getPlayers().size() < 2) {
+                throw new RuntimeException("Room has less than 2 players");
+            }
 
-        room.setGameStarted(true);
+            room.setGameStarted(true);
+        }
         room.setRoundNumber(0);
         room.setDrawerIndex(0);
 
@@ -164,7 +166,7 @@ public class GameEngine {
 
 
         //game end condition
-        if(room.getRoundNumber() == room.getPlayers().size()){
+        if(room.getRoundNumber() >= room.getPlayers().size()){
             publicMsg.setContent("Game Ended with Scores");
             int max = Integer.MIN_VALUE;
             String winner = "";
@@ -178,7 +180,7 @@ public class GameEngine {
         }
         kafkaProducerService.sendMessage(publicMsg);
 
-        if(room.getRoundNumber() == room.getPlayers().size()){
+        if(room.getRoundNumber() >= room.getPlayers().size()){
             room.setRoundNumber(0);
             room.setDrawerIndex(0);
             room.setRoundActive(false);
@@ -186,6 +188,7 @@ public class GameEngine {
             roomManagerService.saveRoom(room);
             return;
         }
+        roundTimers.remove(room.getRoomId());
         startRound(room.getRoomId());
     }
 
@@ -201,6 +204,7 @@ public class GameEngine {
             return;
         }
 
+
         String guess = message.getContent();
         String correctAns = room.getCurrentWord();
 
@@ -211,7 +215,7 @@ public class GameEngine {
         List<Player> players = room.getPlayers();
         Map<String,Integer> playerScores = room.getPlayerScores();
 
-        if(guess.equalsIgnoreCase(correctAns)){
+        if(guess.trim().equalsIgnoreCase(correctAns)){
 
             // cancel timer
             ScheduledFuture<?> future = roundTimers.get(message.getRoomId());

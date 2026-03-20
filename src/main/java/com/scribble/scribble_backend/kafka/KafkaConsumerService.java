@@ -19,7 +19,7 @@ public class KafkaConsumerService {
     public void consume(String jsonString) { // receive as String
         try {
             Message message = objectMapper.readValue(jsonString, Message.class); // parse JSON to Message
-            String topic = "topic/room/" + message.getRoomId();
+            String topic = "/topic/room/" + message.getRoomId();
             messagingTemplate.convertAndSend(topic, message);
         } catch (Exception e) {
             e.printStackTrace();
