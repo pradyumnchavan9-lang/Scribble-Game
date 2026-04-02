@@ -15,7 +15,7 @@ public class KafkaConsumerService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @KafkaListener(topicPattern = "room-.*", groupId = "scribble-group")
+    @KafkaListener(topicPattern = "room-messages", groupId = "scribble-group")
     public void consume(String jsonString) { // receive as String
         try {
             Message message = objectMapper.readValue(jsonString, Message.class); // parse JSON to Message
