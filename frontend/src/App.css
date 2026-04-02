@@ -1,0 +1,57 @@
+/* Full page center */
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f4f6f8;
+  font-family: Arial, sans-serif;
+}
+
+/* Title */
+.app-title {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Box for inputs */
+.join-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Inputs */
+.input-field {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 200px;
+  font-size: 14px;
+}
+
+/* Button */
+.join-button {
+  padding: 10px;
+  background: #4cafef;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.join-button:hover {
+  background: #3a9edb;
+}
+
+/* Connected text */
+.connected-text {
+  color: green;
+  font-weight: bold;
+}
