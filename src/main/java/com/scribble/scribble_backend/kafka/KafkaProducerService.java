@@ -16,10 +16,9 @@ public class KafkaProducerService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void sendMessage(Message message) {
-        String topic = "room-" + message.getRoomId();
         try {
             String jsonString = objectMapper.writeValueAsString(message); // convert to JSON string
-            kafkaTemplate.send(topic,message.getRoomId(), jsonString);
+            kafkaTemplate.send("game-events",message.getRoomId(), jsonString);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }

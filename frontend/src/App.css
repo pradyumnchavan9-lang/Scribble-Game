@@ -1,57 +1,240 @@
-/* Full page center */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Permanent+Marker&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #f0f4ff;
+  font-family: 'Nunito', sans-serif;
+  color: #1a1a2e;
+}
+
+/* ── App wrapper ── */
 .app-container {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  background: #f4f6f8;
-  font-family: Arial, sans-serif;
+  padding: 24px 16px;
 }
 
-/* Title */
 .app-title {
-  margin-bottom: 20px;
-  color: #333;
+  font-family: 'Permanent Marker', cursive;
+  font-size: 2.4rem;
+  color: #3a86ff;
+  margin-bottom: 32px;
+  letter-spacing: 1px;
 }
 
-/* Box for inputs */
+/* ── Join screen ── */
 .join-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(58, 134, 255, 0.12);
 }
 
-/* Inputs */
 .input-field {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 200px;
-  font-size: 14px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #d0d8f0;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
-/* Button */
+.input-field:focus {
+  border-color: #3a86ff;
+}
+
 .join-button {
-  padding: 10px;
-  background: #4cafef;
-  color: white;
+  padding: 10px 14px;
+  background: #3a86ff;
+  color: #fff;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: 0.2s;
+  transition: background 0.2s;
 }
 
 .join-button:hover {
-  background: #3a9edb;
+  background: #2563eb;
 }
 
-/* Connected text */
-.connected-text {
-  color: green;
-  font-weight: bold;
+/* ── Game layout ── */
+.game-layout {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 1200px;
+  align-items: flex-start;
+}
+
+/* ── Left panel: chat ── */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.guess-word {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3a86ff;
+  min-height: 24px;
+}
+
+.messages-box {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  height: 450px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.message-item {
+  font-size: 0.88rem;
+  line-height: 1.4;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #f0f4ff;
+  word-break: break-word;
+}
+
+.guess-container {
+  display: flex;
+  gap: 6px;
+}
+
+.guess-container .input-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.guess-button {
+  padding: 10px 12px;
+  background: #ff6b6b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.guess-button:hover {
+  background: #e63946;
+}
+
+/* ── Center panel: canvas ── */
+.center-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.room-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.room-label {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.start-button {
+  padding: 8px 18px;
+  background: #06d6a0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.start-button:hover {
+  background: #05b889;
+}
+
+.draw-canvas {
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  cursor: crosshair;
+  display: block;
+  width: 100%;
+}
+
+/* ── Right panel: scoreboard ── */
+.right-panel {
+  width: 180px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.scores-title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: #1a1a2e;
+  border-bottom: 2px solid #f0f4ff;
+  padding-bottom: 8px;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.score-row--you {
+  background: #f0f4ff;
+  font-weight: 700;
+}
+
+.score-player {
+  color: #333;
+}
+
+.score-value {
+  font-weight: 800;
+  color: #3a86ff;
 }

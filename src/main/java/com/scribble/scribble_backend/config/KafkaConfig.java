@@ -1,5 +1,6 @@
 package com.scribble.scribble_backend.config;
 
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -51,5 +52,12 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;
+    }
+
+
+    //One Topic for complete game
+    @Bean
+    public NewTopic gameEventsTopic() {
+        return new NewTopic("game-events", 10, (short) 1); // 10 partitions = supports 10 simultaneous rooms
     }
 }

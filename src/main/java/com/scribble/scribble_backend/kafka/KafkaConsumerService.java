@@ -15,11 +15,12 @@ public class KafkaConsumerService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @KafkaListener(topicPattern = "room-messages", groupId = "scribble-group")
+    @KafkaListener(topics = "game-events", groupId = "scribble-group")
     public void consume(String jsonString) { // receive as String
         try {
             Message message = objectMapper.readValue(jsonString, Message.class); // parse JSON to Message
             String topic = "/topic/room/" + message.getRoomId();
+            System.out.println("KAFKA BROADCASTING TO: " + topic);
             messagingTemplate.convertAndSend(topic, message);
         } catch (Exception e) {
             e.printStackTrace();

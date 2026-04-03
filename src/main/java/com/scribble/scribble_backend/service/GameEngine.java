@@ -39,17 +39,22 @@ public class GameEngine {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
     public void startGame(String roomId){
+        System.out.println("startGame called for room: " + roomId);
 
         Room room = roomManagerService.getRoom(roomId);
+        System.out.println("Room found: " + room);
+        System.out.println("Players: " + room.getPlayers().size());
         if(room == null){
             throw new  RuntimeException("Room not found");
         }
         // Locked
         synchronized(room) {
             if (room.isGameStarted()) {
+                System.out.println("Game already started, returning");
                 return;
             }
             if (room.getPlayers().size() < 2) {
+                System.out.println("Not enough players: " + room.getPlayers().size());
                 throw new RuntimeException("Room has less than 2 players");
             }
 
@@ -187,14 +192,25 @@ public class GameEngine {
         if(room.getRoundNumber() >= room.getPlayers().size()){
             publicMsg.setContent("Game Ended with Scores");
             int max = Integer.MIN_VALUE;
-            String winner = "";
+            List<String> topPlayers = new ArrayList<>();
             for(Map.Entry<String,Integer> entry : playerScores.entrySet()){
                 if(entry.getValue() > max){
                     max = entry.getValue();
-                    winner = entry.getKey();
+                    topPlayers.clear();
+                    topPlayers.add(entry.getKey());
+                }else{
+                    if(max == entry.getValue()){
+                        topPlayers.add(entry.getKey());
+                    }
+                }
+
+                if(topPlayers.size() > 1){
+                    publicMsg.setWinner("Tie between: " + String.join(", ",topPlayers));
+                }else{
+                    publicMsg.setWinner(topPlayers.get(0));
                 }
             }
-            publicMsg.setWinner(winner);
+
         }
         kafkaProducerService.sendMessage(publicMsg);
 
@@ -244,18 +260,21 @@ public class GameEngine {
 
             synchronized(room) {
                 Player guesser = null;
+                Player drawer = null;
 
                 for (Player player : players) {
                     if (player.getUsername().equals(message.getSender()) && !player.isCorrectGuess()) {
                         guesser = player;
                         guesser.setCorrectGuess(true);
-                        break;
+                    }
+                    if (player.getUsername().equals(room.getCurrentDrawer().getUsername())) {
+                        drawer = player;
                     }
                 }
 
                 if (guesser != null) {
 
-                    Player drawer = room.getCurrentDrawer();
+
 
                     drawer.setScore(drawer.getScore() + 5);
                     guesser.setScore(guesser.getScore() + 10);
@@ -271,9 +290,9 @@ public class GameEngine {
 
                 }
             }
-
-            kafkaProducerService.sendMessage(broadcast); // ✅ FIRST
-            endRound(room.getRoomId()); // ✅ AFTER
+            roomManagerService.saveRoom(room);
+            kafkaProducerService.sendMessage(broadcast);
+            endRound(room.getRoomId());
 
             return;
         }
