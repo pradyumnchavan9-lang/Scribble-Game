@@ -7,6 +7,7 @@ import com.scribble.scribble_backend.service.RoomManagerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -30,8 +31,8 @@ public class WebSocketController {
 
     //Join Room
     @MessageMapping("/room")
-    public void joinRoom(Message message){
-        roomManagerService.joinRoom(message);
+    public void joinRoom(Message message, SimpMessageHeaderAccessor headerAccessor){
+        roomManagerService.joinRoom(message, headerAccessor);
     }
 
     //Draw Event

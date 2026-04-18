@@ -3,9 +3,7 @@ package com.scribble.scribble_backend.model;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 @Data
@@ -16,9 +14,8 @@ public class Room {
     private List<Player> players = new ArrayList<>();
     private boolean gameStarted;
     private Player currentDrawer;
-    private int drawerIndex;
+    private Set<String> hasDrawn = new HashSet<>();
     private String currentWord;
-    private int roundNumber;
     private Map<String,Integer> playerScores;
     private boolean roundActive;
 

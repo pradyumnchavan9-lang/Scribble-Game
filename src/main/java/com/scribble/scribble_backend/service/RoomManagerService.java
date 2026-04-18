@@ -7,60 +7,66 @@ import com.scribble.scribble_backend.model.Player;
 import com.scribble.scribble_backend.model.Room;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 @Component
 @Slf4j
 public class RoomManagerService {
 
-    @Autowired
-    private RedisService redisService;
+
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    private Map<String, Room> rooms ;
+    private Map<String, String> sessionToRoom;
 
-
-    public Room createRoom(String roomId) {
-        Room room = new Room(roomId);
-
-        String key = "room:" + roomId;
-        redisService.set(key,room,300L);
-        return room;
+    public RoomManagerService() {
+        this.rooms = new ConcurrentHashMap<>();
+        this.sessionToRoom = new ConcurrentHashMap<>();
     }
 
     public Room getRoom(String roomId){
-        String key =  "room:" + roomId;
-        return redisService.get(key,Room.class);
+        return rooms.get(roomId);
     }
 
     public void saveRoom(Room room){
-        String key = "room:" + room.getRoomId();
-        redisService.set(key,room,300L);
+        String roomId = room.getRoomId();
+        rooms.put(roomId, room);
     }
 
     //Join Room
-    public void joinRoom(Message message){
+    public void joinRoom(Message message, SimpMessageHeaderAccessor headerAccessor){
 
+        //  make sure the room exists, putIfAbsent is already synchronized
+        rooms.putIfAbsent(message.getRoomId(), new Room(message.getRoomId()));
 
+        // Get the room
         Room room  = getRoom(message.getRoomId());
-        if(room == null){
-            room = createRoom(message.getRoomId());
-        }
 
-        Player player = new Player(message.getSender(), message.getSender());
-        room.addPlayer(player);
-
-
+        // initialize the message
         Message broadcast = new Message();
-        broadcast.setType(MessageType.PLAYER_JOINED);
-        broadcast.setRoomId(room.getRoomId());
-        broadcast.setSender(player.getUsername());
-        broadcast.setContent(player.getUsername() + " joined the room");
-        saveRoom(room);
+
+        // make sure only one thread can access the room
+        synchronized(room) {
+
+            // create the player who's joining the room
+            Player player = new Player(message.getSender(), message.getSender());
+            room.addPlayer(player);
+
+            broadcast.setType(MessageType.PLAYER_JOINED);
+            broadcast.setRoomId(room.getRoomId());
+            broadcast.setSender(player.getUsername());
+            broadcast.setContent(player.getUsername() + " joined the room");
+
+            //save room with the player
+            sessionToRoom.put(headerAccessor.getSessionId(), room.getRoomId());
+            saveRoom(room);
+        }
         String topic = "/topic/room/" + room.getRoomId();
         messagingTemplate.convertAndSend(topic, broadcast);
     }
@@ -85,6 +91,21 @@ public class RoomManagerService {
         }
         String roomTopic = "/topic/room/" + message.getRoomId();
         messagingTemplate.convertAndSend(roomTopic,message);
+    }
+
+    //get roomId from session
+    public String getRoomIdFromSession(String sessionId){
+        return sessionToRoom.get(sessionId);
+    }
+
+    //remove sessionId once the user disconnects
+    public void removeSession(String sessionId){
+        sessionToRoom.remove(sessionId);
+    }
+
+    //remove room from map once its empty
+    public void removeRoom(String roomId){
+        rooms.remove(roomId);
     }
 
 }

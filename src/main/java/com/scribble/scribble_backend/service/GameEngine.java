@@ -2,13 +2,15 @@ package com.scribble.scribble_backend.service;
 
 
 import com.scribble.scribble_backend.enums.MessageType;
-import com.scribble.scribble_backend.kafka.KafkaProducerService;
 import com.scribble.scribble_backend.model.Message;
 import com.scribble.scribble_backend.model.Player;
 import com.scribble.scribble_backend.model.Room;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -29,8 +31,6 @@ public class GameEngine {
     private RoomManagerService roomManagerService;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-    @Autowired
-    private KafkaProducerService kafkaProducerService;
 
     private final Random random = new Random();
 
@@ -38,15 +38,19 @@ public class GameEngine {
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
+
+
     public void startGame(String roomId){
         System.out.println("startGame called for room: " + roomId);
 
         Room room = roomManagerService.getRoom(roomId);
-        System.out.println("Room found: " + room);
-        System.out.println("Players: " + room.getPlayers().size());
+
         if(room == null){
             throw new  RuntimeException("Room not found");
         }
+
+        System.out.println("Room found: " + room);
+        System.out.println("Players: " + room.getPlayers().size());
         // Locked
         synchronized(room) {
             if (room.isGameStarted()) {
@@ -60,8 +64,6 @@ public class GameEngine {
 
             room.setGameStarted(true);
 
-            room.setRoundNumber(0);
-            room.setDrawerIndex(0);
 
             List<Player> players = room.getPlayers();
             Map<String, Integer> playerScores = new ConcurrentHashMap<>();
@@ -81,13 +83,17 @@ public class GameEngine {
 
         //Get the room
         Room room  = roomManagerService.getRoom(roomId);
+
+        if (room == null) {
+            throw new NullPointerException("Room not found");
+        }
         synchronized(room) {
 
-            if(room.isRoundActive()){
+            if(!room.isGameStarted()) {
                 return;
             }
-            if (room == null) {
-                throw new RuntimeException("Room not found");
+            if(room.isRoundActive()){
+                return;
             }
 
             List<Player> players = room.getPlayers();
@@ -96,12 +102,17 @@ public class GameEngine {
 
             }
 
-            //Increment Round number
-            room.setRoundNumber(room.getRoundNumber() + 1);
 
             //Select player using drawer Index
-            int index = room.getDrawerIndex() % room.getPlayers().size();
-            room.setCurrentDrawer(room.getPlayers().get(index));
+           Set<String> hasDrawn = room.getHasDrawn();
+           for(Player p : players){
+               if(!hasDrawn.contains(p.getUsername())){
+                   hasDrawn.add(p.getUsername());
+                   room.setCurrentDrawer(p);
+                   break;
+               }
+           }
+
 
             //Select a random word to be guessed
             String correctWord = words.get(random.nextInt(words.size()));
@@ -117,7 +128,8 @@ public class GameEngine {
         publicMsg.setRoomId(roomId);
         publicMsg.setDrawer(room.getCurrentDrawer().getUsername());
         publicMsg.setContent("");
-        kafkaProducerService.sendMessage(publicMsg);
+        String topic = "/topic/room/" + roomId;
+        messagingTemplate.convertAndSend(topic, publicMsg);
 
         //2nd message privately to the drawer
         Message privateMsg = new Message();
@@ -153,6 +165,9 @@ public class GameEngine {
         String currentWordSnapshot;
         synchronized(room) {
 
+            if(!room.isGameStarted()){
+                return;
+            }
             if (!room.isRoundActive()) {
                 return;
             }
@@ -166,7 +181,6 @@ public class GameEngine {
             }
 
             //Update Drawer index
-            room.setDrawerIndex(room.getDrawerIndex() + 1);
             scoresSnapshot = new HashMap<>(room.getPlayerScores());
             currentWordSnapshot = room.getCurrentWord();
         }
@@ -189,7 +203,7 @@ public class GameEngine {
 
 
         //game end condition
-        if(room.getRoundNumber() >= room.getPlayers().size()){
+        if(room.getHasDrawn().size() >= room.getPlayers().size()){
             publicMsg.setContent("Game Ended with Scores");
             int max = Integer.MIN_VALUE;
             List<String> topPlayers = new ArrayList<>();
@@ -203,20 +217,19 @@ public class GameEngine {
                         topPlayers.add(entry.getKey());
                     }
                 }
-
-                if(topPlayers.size() > 1){
-                    publicMsg.setWinner("Tie between: " + String.join(", ",topPlayers));
-                }else{
-                    publicMsg.setWinner(topPlayers.get(0));
-                }
+            }
+            if(topPlayers.size() > 1){
+                publicMsg.setWinner("Tie between: " + String.join(", ",topPlayers));
+            }else{
+                publicMsg.setWinner(topPlayers.get(0));
             }
 
         }
-        kafkaProducerService.sendMessage(publicMsg);
+        String topic = "/topic/room/" + roomId;
+        messagingTemplate.convertAndSend(topic, publicMsg);
 
-        if(room.getRoundNumber() >= room.getPlayers().size()){
-            room.setRoundNumber(0);
-            room.setDrawerIndex(0);
+        if(room.getHasDrawn().size() >= room.getPlayers().size()){
+            room.setHasDrawn(new HashSet<>());
             room.setRoundActive(false);
             room.setGameStarted(false);
             roomManagerService.saveRoom(room);
@@ -291,7 +304,9 @@ public class GameEngine {
                 }
             }
             roomManagerService.saveRoom(room);
-            kafkaProducerService.sendMessage(broadcast);
+
+            String topic = "/topic/room/" + room.getRoomId();
+            messagingTemplate.convertAndSend(topic, broadcast);
             endRound(room.getRoomId());
 
             return;
@@ -300,7 +315,85 @@ public class GameEngine {
         // wrong guess
         broadcast.setType(MessageType.CHAT);
         broadcast.setContent(guess);
+        String topic = "/topic/room/" + room.getRoomId();
+        messagingTemplate.convertAndSend(topic, broadcast);
+    }
 
-        kafkaProducerService.sendMessage(broadcast);
+
+    @EventListener
+    public void handleDisconnect(SessionDisconnectEvent event){
+        String roomId = roomManagerService.getRoomIdFromSession(event.getSessionId());
+        String username = event.getUser().getName();
+
+
+        Room room = roomManagerService.getRoom(roomId);
+        if(room == null){
+            return;
+        }
+
+        //remove player from room
+        List<Player> players = room.getPlayers();
+        Iterator<Player> it = players.iterator();
+        while(it.hasNext()){
+            if(it.next().getUsername().equals(username)){
+                it.remove();
+            }
+        }
+
+        //remove session ID from map
+        roomManagerService.removeSession(event.getSessionId());
+
+        // if room empty remove room entirely
+        if(players.isEmpty()){
+            roomManagerService.removeRoom(roomId);
+            return;
+        }
+
+        //Broadcast player left
+        String content = "Player: " + username + " has left the room";
+        Message broadcast = new Message();
+        broadcast.setRoomId(room.getRoomId());
+        broadcast.setSender(username);
+        broadcast.setContent(content);
+        String topic = "/topic/room/" + room.getRoomId();
+        messagingTemplate.convertAndSend(topic, broadcast);
+
+        //return if game not started
+        if(!room.isGameStarted()){
+            return;
+        }
+
+        //if room has less than 2 players
+        if(players.size() < 2){
+
+            ScheduledFuture<?> future = roundTimers.get(roomId);
+            if(future != null){
+                future.cancel(true);
+                roundTimers.remove(roomId);
+            }
+            room.setGameStarted(false);
+            String msg = "Game cannot be started with less than 2 players";
+            Message message = new Message();
+            message.setRoomId(room.getRoomId());
+            message.setSender(username);
+            message.setContent(msg);
+            String topicName = "/topic/room/" + room.getRoomId();
+            messagingTemplate.convertAndSend(topicName, message);
+            return;
+        }
+
+        //if drawer left cancel timer
+        if(room.getCurrentDrawer() != null &&
+                room.getCurrentDrawer().getUsername().equals(username)){
+            Map<String, ScheduledFuture<?>> futures = roundTimers;
+            ScheduledFuture<?> future = futures.get(roomId);
+            if(future != null){
+                future.cancel(true);
+                futures.remove(roomId);
+            }
+            roomManagerService.saveRoom(room);
+            endRound(roomId);
+        }
+
     }
 }
