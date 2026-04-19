@@ -12,6 +12,6 @@ public enum MessageType {
     CORRECT_GUESS,
     ROUND_START,
     ROUND_END,
-    START_GAME
+    ROOM_OWNER_CHANGED, START_GAME
 
 }

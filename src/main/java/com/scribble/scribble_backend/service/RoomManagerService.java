@@ -43,7 +43,7 @@ public class RoomManagerService {
     public void joinRoom(Message message, SimpMessageHeaderAccessor headerAccessor){
 
         //  make sure the room exists, putIfAbsent is already synchronized
-        rooms.putIfAbsent(message.getRoomId(), new Room(message.getRoomId()));
+        rooms.putIfAbsent(message.getRoomId(), new Room(message.getRoomId(), message.getSender()));
 
         // Get the room
         Room room  = getRoom(message.getRoomId());

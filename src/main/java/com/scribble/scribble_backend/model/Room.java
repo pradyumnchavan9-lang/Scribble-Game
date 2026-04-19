@@ -15,12 +15,16 @@ public class Room {
     private boolean gameStarted;
     private Player currentDrawer;
     private Set<String> hasDrawn = new HashSet<>();
+    private Set<String> hasGuessed = new HashSet<>();
     private String currentWord;
     private Map<String,Integer> playerScores;
     private boolean roundActive;
+    private String roomOwner;
 
-    public Room(String roomId){
+    public Room(String roomId, String roomOwner){
+
         this.roomId = roomId;
+        this.roomOwner = roomOwner;
     }
 
     public void addPlayer(Player player){
@@ -31,5 +35,7 @@ public class Room {
         this.players.remove(player);
     }
 
-
+    public void addGuessed(String guess){
+        this.hasGuessed.add(guess);
+    }
 }

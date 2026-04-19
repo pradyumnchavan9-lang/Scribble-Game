@@ -50,6 +50,6 @@ public class WebSocketController {
     //Start Game
     @MessageMapping("/start")
     public void startGame(Message message){
-        gameEngine.startGame(message.getRoomId());
+        gameEngine.startGame(message);
     }
 }
